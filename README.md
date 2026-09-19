@@ -29,10 +29,9 @@ homelab/
 Each folder has its own README with more detail and the reasoning behind
 specific setup choices.
 
-The MIT license in this repo covers my own configuration files, scripts,
-and documentation. It doesn't extend to the third-party software these
-stacks run (Jellyfin, Immich, Home Assistant, etc.), which remain under
-their own respective licenses.
+This repo is shared for portfolio purposes - to show how things are set up and how I approach infrastructure decisions. 
+No license is granted for reuse of the configuration files, scripts, or documentation here. 
+Third-party software referenced (Jellyfin, Immich, Home Assistant, etc.) remains under its own respective license.
 
 ## About this repo
 
