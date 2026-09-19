@@ -1,0 +1,98 @@
+# === PHOTO CLOUD (IMMICH CORE SUITE - ISOLATED STORAGE PROXY NETWORKS) ===
+services:
+  immich-server:
+    container_name: Home_photo_cloud
+    image: ghcr.io/immich-app/immich-server@sha256:b434cb9287eea1471c9974845914d4dd328c9c2d652e446ed4930f99944f0ceb
+    security_opt:
+      - no-new-privileges:true
+    runtime: nvidia
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 8000M
+    volumes:
+      - ${UPLOAD_LOCATION}:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES}
+    ports:
+      - "2283:2283"
+    networks:
+      - immich-isolated-net                         # Isolated completely away from downloader vectors
+    depends_on:
+      database:
+        condition: service_healthy                   # Immich server stalls boot sequence until database resolves healthy
+      redis:
+        condition: service_started
+    restart: always
+
+  immich-machine-learning:
+    container_name: immich_ai_brain
+    image: ghcr.io/immich-app/immich-machine-learning@sha256:82d3f6a093455964508052e0b3bc55a91075b48b65be35e78b40774a72c1ebb3
+    security_opt:
+      - no-new-privileges:true
+    runtime: nvidia
+    env_file:
+      - .env                                         
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES}  
+    volumes:
+      - ./immich-cache:/cache
+    networks:
+      - immich-isolated-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4000M
+    restart: always
+
+  redis:
+    container_name: photo_speed_cache
+    image: docker.io/redis@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1000M
+    networks:
+      - immich-isolated-net
+    restart: always
+
+  database:
+    container_name: master_vault_db
+    image: ghcr.io/immich-app/postgres@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4000M
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - ./immich-db:/var/lib/postgresql/data
+    networks:
+      - immich-isolated-net
+    healthcheck:                                     
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      start_period: 20s
+      start_interval: 5s
+      timeout: 3s
+      interval: 24h
+      retries: 3
+    restart: always
+
+networks:
+  immich-isolated-net:
+    driver: bridge

@@ -1,0 +1,17 @@
+name: uptime-kuma
+services:
+  uptime-kuma:
+    container_name: house_watch_kuma
+    image: louislam/uptime-kuma:2
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - ./uptime-kuma-data:/app/data
+    ports:
+      - "3001:3001"
+    restart: unless-stopped

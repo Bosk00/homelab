@@ -1,0 +1,174 @@
+  # === MOVIE STREAMING (JELLYFIN CORE + HARDENED NVIDIA LAYERS) ===
+  jellyfin:
+    container_name: Home_Streaming
+    image: lscr.io/linuxserver/jellyfin@sha256:4f6d8dfc53ec5a1ddf7a90e4338972d57d7b0adff6dc88b53184f8285d0b594f
+    security_opt:
+      - no-new-privileges:true
+    runtime: nvidia
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8000M
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ:-Etc/UTC}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES}  
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./jellyfin-config:/config
+      - ${MEDIA_PATH}:/data:ro
+    networks:
+      - media-automation-net
+    restart: always
+
+  # === HIGH-SPEED AUTOMATION SUITE (THE ARRS SUITE ZONE) ===
+  sabnzbd:
+    container_name: sabnzbd
+    image: lscr.io/linuxserver/sabnzbd@sha256:13d4404f1242f819e0cc2e294def5858def251a3609eb59404dad303075a564a
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 6000M                                
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${CONFIG_ROOT}/sabnzbd:/config
+      - ${MEDIA_PATH}:/data
+    ports:
+      - "8080:8080"
+    networks:
+      - media-automation-net
+    restart: always
+
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr@sha256:ab91301778251f82a31bbfc87f0497376d59e84439d9a1ceff6a61d594d1e3d7
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2000M
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${CONFIG_ROOT}/prowlarr:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-automation-net
+    restart: always
+
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr@sha256:c19aa4ecdf03d73e1d5c901da33744cb7eb4d921f89bafed1ca264601d7fa224
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4000M
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${CONFIG_ROOT}/sonarr:/config
+      - ${MEDIA_PATH}:/data
+    ports:
+      - "8989:8989"
+    networks:
+      - media-automation-net
+    restart: always
+
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr@sha256:119aaa4a4f7349bcd2a136c5373a0d7925b5479915c7dfe0c0ad352db2a6d438
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4000M
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${CONFIG_ROOT}/radarr:/config
+      - ${MEDIA_PATH}:/data
+    ports:
+      - "7878:7878"
+    networks:
+      - media-automation-net
+    restart: always
+
+  seerr:
+    container_name: seerr
+    image: ghcr.io/seerr-team/seerr:v3.4.1
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2000M
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${CONFIG_ROOT}/jellyseerr:/app/config
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
+      start_period: 20s
+      start_interval: 5s
+      timeout: 3s
+      interval: 24h
+      retries: 3
+    ports:
+      - "5055:5055"
+    networks:
+      - media-automation-net
+    restart: always
+
+  bazarr:
+    container_name: bazarr
+    image: lscr.io/linuxserver/bazarr@sha256:84b6f05a7a4194fafe5a0bec062d32f6ae9ea74db33d43d678cb9a3191f31c24
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1000M
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${CONFIG_ROOT}/bazarr:/config
+      - ${MEDIA_PATH}:/data
+    networks:
+      - media-automation-net
+    restart: always
+
+networks:
+  media-automation-net:
+    driver: bridge
+    name: media-automation-net    

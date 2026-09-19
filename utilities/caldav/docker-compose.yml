@@ -1,0 +1,23 @@
+services:
+  caldav:
+    container_name: house_caldav
+    image: ghcr.io/kozea/radicale:3.8.0   
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    volumes:
+      - ./config:/etc/radicale:ro
+      - ./data:/var/lib/radicale
+    networks:
+      - utility-dashboard-net
+    restart: always
+
+networks:
+  utility-dashboard-net:
+    external: true
+    name: utility-dashboard-net

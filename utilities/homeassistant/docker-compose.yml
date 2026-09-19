@@ -1,0 +1,19 @@
+  # === THE AUTOMATION BRAIN (HOME ASSISTANT) ===
+  # Bridge networking with manual port mapping
+services:
+  homeassistant:
+    container_name: house_brain_assistant
+    image: ghcr.io/home-assistant/home-assistant:2026.8.3   # verified current stable via GitHub releases page 2026-08-29
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "8123:8123"
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 2048M
+    volumes:
+      - ./homeassistant-config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped

@@ -1,0 +1,85 @@
+services:
+  # ===  INTERNAL REVERSE PROXY (NGINX PROXY MANAGER) ===
+  nginx-proxy-manager:
+    container_name: house_gate_proxy
+    image: jc21/nginx-proxy-manager:2.15.1   #  verified current stable via GitHub releases page 2026-08-29
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+    volumes:
+      - ./npm-data:/data
+      - ./npm-letsencrypt:/etc/letsencrypt
+    networks:
+      - utility-dashboard-net
+      - media-automation-net 
+    restart: always
+
+  # ===  DOCKER SOCKET SECURE PROXY WALL ===
+  # Homepage talks to THIS, never the real socket directly.
+  docker-socket-proxy:
+    container_name: secure_socket_shield
+    image: tecnativa/docker-socket-proxy:v0.5.0   #  confirmed via GitHub releases page 2026-08-29  official release
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CONTAINERS=${CONTAINERS}
+      - IMAGES=${IMAGES}
+      - NETWORKS=${NETWORKS}
+      - VOLUMES=${VOLUMES}
+      - EXEC=${EXEC}
+      - POST=${POST}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - utility-dashboard-net
+    restart: always
+
+  # === HOMEPAGE/DASHBOARD ===
+  # Read-only dashboard: shows container status/links via docker-socket-proxy.
+  # No start/stop/restart/logs/exec capability — Portainer intentionally
+  # skipped for now since CLI already covers management comfortably.
+  homepage:
+    container_name: empire_master_dashboard
+    image: ghcr.io/gethomepage/homepage:v2.1.2   #  verified via GitHub releases page 2026-08-29 
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS}  
+    volumes:
+      - ./homepage-config:/app/config
+      - ./homepage-config/images:/app/public/images
+      - ${STORAGE_PATH}:/mnt/storage:ro
+      # removed: /:/nvme:ro — unused storage widget, unnecessarily broad mount
+    ports:
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+    networks:
+      - utility-dashboard-net
+    depends_on:
+      - docker-socket-proxy
+    restart: always
+
+networks:
+  utility-dashboard-net:
+    driver: bridge
+    name: utility-dashboard-net
+  media-automation-net:
+    external: true       
